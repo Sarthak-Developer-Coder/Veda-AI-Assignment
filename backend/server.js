@@ -377,7 +377,7 @@ async function alignQuestionsWithAnswerData(questionList, answerDocument) {
         feedback:
           grade?.feedback ||
           (answerDetected
-            ? "AI grading is unavailable. Configure GEMINI_API_KEY to evaluate this answer."
+            ? "Answer detected, but AI grading is unavailable. Check the Gemini key and Render deployment logs."
             : "No answer was detected for this question."),
         answerIds: answerDetected ? [answer.answerId] : [],
         regions: answer?.regions || [],

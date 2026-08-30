@@ -77,7 +77,11 @@ export function QuestionList({
                       scoreStyles[q.state],
                     )}
                   >
-                    {q.state === "unanswered" ? "Unanswered" : `${q.earned}/${q.total}`}
+                    {q.state === "unanswered"
+                      ? "Unanswered"
+                      : q.state === "answered"
+                        ? "Answered"
+                        : `${q.earned}/${q.total}`}
                   </span>
                   <button
                     onClick={(e) => {
