@@ -79,16 +79,16 @@ async function discoverGeminiModels() {
 
 export async function mapAnswersWithAI(questions, answerSegments) {
   return askGemini(
-    `Map answer segments to questions. Use the detected question number as the strongest signal. Do not map by physical order. An answer may span multiple segments. Return one result for every answer segment and use null for questionId when unmatched.\nQuestions:\n${JSON.stringify(questions)}\nAnswer segments:\n${JSON.stringify(answerSegments)}`,
+    `Map answer segments to questions. Use the detected question number as the strongest signal. Do not map by physical order. An answer may span multiple segments. Return one result for every answer segment and use an empty questionId for unmatched answers.\nQuestions:\n${JSON.stringify(questions)}\nAnswer segments:\n${JSON.stringify(answerSegments)}`,
     {
-      type: "array",
+      type: "ARRAY",
       items: {
-        type: "object",
+        type: "OBJECT",
         properties: {
-          answerId: { type: "string", nullable: true },
-          questionId: { type: "string", nullable: true },
-          confidence: { type: "number" },
-          status: { type: "string", enum: ["answered", "unmatched", "uncertain"] },
+          answerId: { type: "STRING" },
+          questionId: { type: "STRING" },
+          confidence: { type: "NUMBER" },
+          status: { type: "STRING", enum: ["answered", "unmatched", "uncertain"] },
         },
         required: ["answerId", "questionId", "confidence", "status"],
       },
@@ -96,21 +96,25 @@ export async function mapAnswersWithAI(questions, answerSegments) {
   );
 }
 
-export async function gradeAnswersWithAI(question, answerText) {
+export async function gradeAnswersWithAI(questions, answers) {
   return askGemini(
-    `Evaluate this student's answer against the question. Award no more than the maximum marks. Do not infer content that is not in the answer. Return only the requested JSON.\nQuestion: ${JSON.stringify(question)}\nStudent answer: ${JSON.stringify(answerText)}`,
+    `Evaluate every student's answer against its question. Award no more than the maximum marks. Do not infer content that is not in the answer. Return one result for every supplied question.\nQuestions: ${JSON.stringify(questions)}\nAnswers: ${JSON.stringify(answers)}`,
     {
-      type: "object",
-      properties: {
-        marksAwarded: { type: "number" },
-        maxMarks: { type: "number" },
-        status: {
-          type: "string",
-          enum: ["correct", "partially_correct", "incorrect", "unanswered"],
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          questionId: { type: "STRING" },
+          marksAwarded: { type: "NUMBER" },
+          maxMarks: { type: "NUMBER" },
+          status: {
+            type: "STRING",
+            enum: ["correct", "partially_correct", "incorrect", "unanswered"],
+          },
+          feedback: { type: "STRING" },
         },
-        feedback: { type: "string" },
+        required: ["questionId", "marksAwarded", "maxMarks", "status", "feedback"],
       },
-      required: ["marksAwarded", "maxMarks", "status", "feedback"],
     },
   );
 }

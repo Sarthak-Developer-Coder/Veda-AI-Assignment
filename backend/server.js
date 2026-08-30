@@ -338,52 +338,61 @@ async function alignQuestionsWithAnswerData(questionList, answerDocument) {
     }
   }
 
-  return Promise.all(
-    questionList.map(async (question) => {
-      const mapping =
-        aiMappings?.find((item) => item.questionId === question.id) ||
-        (answerSegments.some((item) => item.questionId === question.id)
-          ? { questionId: question.id, confidence: 1, status: "answered" }
-          : null);
+  let aiGrades = null;
+  const matchedAnswers = questionList
+    .map((question) => {
       const answer = answerSegments.find((item) => item.questionId === question.id);
-      const answerDetected = Boolean(mapping && mapping.confidence >= 0.65 && answer);
-      let grade = null;
-      if (answerDetected && hasAIProvider()) {
-        try {
-          grade = await gradeAnswersWithAI(question, answer.text);
-        } catch (error) {
-          console.error(`AI grading unavailable for ${question.id}:`, error);
-        }
-      }
+      return answer ? { question, answer } : null;
+    })
+    .filter(Boolean);
+  if (hasAIProvider() && matchedAnswers.length) {
+    try {
+      aiGrades = await gradeAnswersWithAI(
+        matchedAnswers.map(({ question }) => question),
+        matchedAnswers.map(({ answer }) => answer),
+      );
+    } catch (error) {
+      console.error("AI batch grading unavailable:", error);
+    }
+  }
 
-      const earned = grade
-        ? Math.min(question.total, Math.max(0, Number(grade.marksAwarded) || 0))
-        : 0;
-      const state =
-        grade?.status === "correct"
-          ? "good"
-          : grade?.status === "partially_correct"
-            ? "partial"
-            : grade?.status === "incorrect"
-              ? "bad"
-              : answerDetected
-                ? "answered"
-                : "unanswered";
+  return questionList.map((question) => {
+    const mapping =
+      aiMappings?.find((item) => item.questionId === question.id) ||
+      (answerSegments.some((item) => item.questionId === question.id)
+        ? { questionId: question.id, confidence: 1, status: "answered" }
+        : null);
+    const answer = answerSegments.find((item) => item.questionId === question.id);
+    const answerDetected = Boolean(mapping && mapping.confidence >= 0.65 && answer);
+    const grade = aiGrades?.find((item) => item.questionId === question.id);
 
-      return {
-        ...question,
-        earned,
-        state,
-        feedback:
-          grade?.feedback ||
-          (answerDetected
-            ? "Answer detected, but AI grading is unavailable. Check the Gemini key and Render deployment logs."
-            : "No answer was detected for this question."),
-        answerIds: answerDetected ? [answer.answerId] : [],
-        regions: answer?.regions || [],
-      };
-    }),
-  );
+    const earned = grade
+      ? Math.min(question.total, Math.max(0, Number(grade.marksAwarded) || 0))
+      : 0;
+    const state =
+      grade?.status === "correct"
+        ? "good"
+        : grade?.status === "partially_correct"
+          ? "partial"
+          : grade?.status === "incorrect"
+            ? "bad"
+            : answerDetected
+              ? "answered"
+              : "unanswered";
+
+    return {
+      ...question,
+      earned,
+      state,
+      feedback:
+        grade?.feedback ||
+        (answerDetected
+          ? "Answer detected, but AI grading is unavailable. Check the Gemini key and Render deployment logs."
+          : "No answer was detected for this question."),
+      answerIds: answerDetected ? [answer.answerId] : [],
+      regions: answer?.regions || [],
+    };
+  });
 }
 
 async function buildAssessmentFromDocument(filePath, originalName, documentType = "question") {
