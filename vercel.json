@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/client",
+  "buildCommand": "npm install --include=dev && npm run build:client",
+  "outputDirectory": "dist-vercel",
   "framework": "vite",
   "cleanUrls": true
 }

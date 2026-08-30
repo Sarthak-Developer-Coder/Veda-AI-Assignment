@@ -8,6 +8,7 @@
     "dev:client": "vite dev --host 0.0.0.0",
     "dev:server": "node backend/server.js",
     "build": "vite build",
+    "build:client": "vite build --config vite.client.config.ts",
     "build:dev": "vite build --mode development",
     "preview": "vite preview --host 0.0.0.0",
     "server": "node backend/server.js",

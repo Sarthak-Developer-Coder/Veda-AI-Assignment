@@ -65,7 +65,7 @@ The included `render.yaml` creates the Node/Express web service. Set `GEMINI_API
 
 ### Vercel frontend
 
-Import the repository into Vercel. The included `vercel.json` builds the client output. Add this environment variable in Vercel, pointing to the Render service without a trailing slash:
+Import the repository into Vercel. The included `vercel.json` runs the dedicated static browser build and serves `dist-vercel`. Add this environment variable in Vercel, pointing to the Render service without a trailing slash:
 
 ```env
 VITE_API_URL=https://your-render-service.onrender.com
