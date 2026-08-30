@@ -78,10 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "VedaAI — AI Assessment Extraction & Answer Mapping" },
-      { name: "description", content: "AI-powered assessment extraction and answer mapping for question papers and answer sheets." },
+      {
+        name: "description",
+        content:
+          "AI-powered assessment extraction and answer mapping for question papers and answer sheets.",
+      },
       { name: "author", content: "VedaAI" },
       { property: "og:title", content: "VedaAI — AI Assessment Extraction & Answer Mapping" },
-      { property: "og:description", content: "Extract exam questions, map answers to the correct handwritten regions, and review adaptive feedback." },
+      {
+        property: "og:description",
+        content:
+          "Extract exam questions, map answers to the correct handwritten regions, and review adaptive feedback.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -96,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/vedaai-mark.svg", type: "image/svg+xml" },
     ],
   }),
 
