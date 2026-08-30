@@ -3,7 +3,7 @@ services:
     name: vedaai-api
     runtime: node
     rootDir: .
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: npm run server
     envVars:
       - key: NODE_ENV

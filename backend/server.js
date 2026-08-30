@@ -22,6 +22,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
+const clientDir = path.join(__dirname, "../dist/client");
+app.use(express.static(clientDir));
 
 const uploadDir = path.join(__dirname, "uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -524,6 +526,28 @@ app.post(
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, status: "healthy" });
+});
+
+app.get("/", (_req, res) => {
+  const indexFile = path.join(clientDir, "index.html");
+  if (fs.existsSync(indexFile)) {
+    res.sendFile(indexFile);
+    return;
+  }
+  res.json({ ok: true, service: "VedaAI API", health: "/api/health" });
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    next();
+    return;
+  }
+  const indexFile = path.join(clientDir, "index.html");
+  if (fs.existsSync(indexFile)) {
+    res.sendFile(indexFile);
+    return;
+  }
+  res.status(404).json({ error: "Route not found." });
 });
 
 app.listen(PORT, () => {
