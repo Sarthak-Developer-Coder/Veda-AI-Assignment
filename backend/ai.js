@@ -1,5 +1,5 @@
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_FALLBACK_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"];
 
 function extractJson(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
@@ -11,31 +11,39 @@ function extractJson(text) {
 async function askGemini(prompt, schema) {
   if (!process.env.GEMINI_API_KEY) return null;
 
-  const response = await fetch(
-    `${GEMINI_URL}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: "application/json",
-          responseSchema: schema,
-        },
-      }),
-      signal: AbortSignal.timeout(45_000),
-    },
-  );
+  const models = [...new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS])];
+  let lastResponse;
 
-  if (!response.ok) {
-    throw new Error(`Gemini request failed with HTTP ${response.status}.`);
+  for (const model of models) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
+            responseSchema: schema,
+          },
+        }),
+        signal: AbortSignal.timeout(45_000),
+      },
+    );
+
+    if (response.ok) {
+      const payload = await response.json();
+      const text =
+        payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("") || "";
+      return extractJson(text);
+    }
+
+    lastResponse = response;
+    if (response.status !== 404) break;
   }
 
-  const payload = await response.json();
-  const text =
-    payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("") || "";
-  return extractJson(text);
+  throw new Error(`Gemini request failed with HTTP ${lastResponse?.status || 500}.`);
 }
 
 export async function mapAnswersWithAI(questions, answerSegments) {

@@ -34,7 +34,7 @@ Create a `.env` file for optional AI grading:
 
 ```env
 GEMINI_API_KEY=your-server-side-key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
 Never expose `GEMINI_API_KEY` through Vite or browser code. Without the key, local OCR and explicit number-based answer detection still run, but AI grading is reported as unavailable rather than simulated.

@@ -329,7 +329,14 @@ function buildAnswerSegments(document) {
 
 async function alignQuestionsWithAnswerData(questionList, answerDocument) {
   const answerSegments = buildAnswerSegments(answerDocument);
-  const aiMappings = hasAIProvider() ? await mapAnswersWithAI(questionList, answerSegments) : null;
+  let aiMappings = null;
+  if (hasAIProvider()) {
+    try {
+      aiMappings = await mapAnswersWithAI(questionList, answerSegments);
+    } catch (error) {
+      console.error("AI answer mapping unavailable:", error);
+    }
+  }
 
   return Promise.all(
     questionList.map(async (question) => {
@@ -340,8 +347,14 @@ async function alignQuestionsWithAnswerData(questionList, answerDocument) {
           : null);
       const answer = answerSegments.find((item) => item.questionId === question.id);
       const answerDetected = Boolean(mapping && mapping.confidence >= 0.65 && answer);
-      const grade =
-        answerDetected && hasAIProvider() ? await gradeAnswersWithAI(question, answer.text) : null;
+      let grade = null;
+      if (answerDetected && hasAIProvider()) {
+        try {
+          grade = await gradeAnswersWithAI(question, answer.text);
+        } catch (error) {
+          console.error(`AI grading unavailable for ${question.id}:`, error);
+        }
+      }
 
       const earned = grade
         ? Math.min(question.total, Math.max(0, Number(grade.marksAwarded) || 0))
