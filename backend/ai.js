@@ -1,6 +1,7 @@
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const GEMINI_FALLBACK_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"];
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+let availableModelsPromise;
 
 function extractJson(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
@@ -12,7 +13,8 @@ function extractJson(text) {
 async function askGemini(prompt, schema) {
   if (!GEMINI_API_KEY) return null;
 
-  let models = [...new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS])];
+  const discoveredModels = await discoverGeminiModels();
+  let models = [...new Set([GEMINI_MODEL, ...discoveredModels, ...GEMINI_FALLBACK_MODELS])];
   let lastResponse;
 
   for (const model of models) {
@@ -41,12 +43,7 @@ async function askGemini(prompt, schema) {
     }
 
     lastResponse = response;
-    if (response.status === 404 && model === models.at(-1)) {
-      const discovered = await discoverGeminiModels();
-      if (discovered.length) {
-        models = [...new Set([...models, ...discovered])];
-      }
-    } else if (response.status !== 404) {
+    if (response.status !== 404) {
       break;
     }
   }
@@ -55,16 +52,29 @@ async function askGemini(prompt, schema) {
 }
 
 async function discoverGeminiModels() {
-  const response = await fetch(
+  if (availableModelsPromise) return availableModelsPromise;
+
+  availableModelsPromise = fetch(
     `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(GEMINI_API_KEY)}`,
     { signal: AbortSignal.timeout(15_000) },
-  );
-  if (!response.ok) return [];
-  const payload = await response.json();
-  return (payload.models || [])
-    .filter((model) => model.supportedGenerationMethods?.includes("generateContent"))
-    .map((model) => String(model.name || "").replace(/^models\//, ""))
-    .filter((model) => /flash/i.test(model));
+  )
+    .then(async (response) => {
+      if (!response.ok) {
+        console.error(`Gemini model discovery failed with HTTP ${response.status}.`);
+        return [];
+      }
+      const payload = await response.json();
+      return (payload.models || [])
+        .filter((model) => model.supportedGenerationMethods?.includes("generateContent"))
+        .map((model) => String(model.name || "").replace(/^models\//, ""))
+        .filter((model) => /flash/i.test(model));
+    })
+    .catch((error) => {
+      console.error("Gemini model discovery failed:", error);
+      return [];
+    });
+
+  return availableModelsPromise;
 }
 
 export async function mapAnswersWithAI(questions, answerSegments) {
